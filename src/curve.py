@@ -59,12 +59,21 @@ class G1Point:
     def __add__(self, other):
         if not isinstance(other, G1Point):
             raise TypeError("Cannot add G1Point and non-G1Point")
+
+        # Check for the identity element
         if self.is_identity():
             return other
         if other.is_identity():
             return self
+
+        # Check for point doubling
+        if self.x == other.x and self.y == other.y:
+            return self.double()
+
+        # Check for the additive inverse (result is the identity element)
         if self.x == other.x and self.y != other.y:
-            return G1Point(None, None)  # Result is the identity element
+            return G1Point(None, None)
+
         return self.add(other)
 
     def __sub__(self, other):
