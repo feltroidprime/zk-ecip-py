@@ -2,6 +2,7 @@ from src.field import BaseFieldElement as Felt, BaseField
 from dataclasses import dataclass
 
 # ------------------------------------------------------------
+# Equation : y^2 = x^3 + 3
 # Curve prime field
 P = 0x30644E72E131A029B85045B68181585D97816A916871CA8D3C208C16D87CFD47
 # Curve order
@@ -96,7 +97,7 @@ POINT_AT_INFINITY = G1Point(None, None)
 
 def is_on_curve(pt: G1Point):
     left = pt.y**2
-    right = pt.x**3 + 3 * pt.x + 1
+    right = pt.x**3 + 3
     return left == right, f"{left} != {right}"
 
 
