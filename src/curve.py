@@ -46,7 +46,7 @@ class G1Point:
         addend = self
         while scalar:
             if scalar & 1:
-                result = result.add(addend)
+                result += addend
             addend = addend.double()
             scalar >>= 1
 
@@ -102,3 +102,7 @@ def is_on_curve(pt: G1Point):
 
 
 assert is_on_curve(G1)
+
+print(G1.scalar_mul(2))
+print(G1.scalar_mul(N - 1))
+assert G1.scalar_mul(N) == POINT_AT_INFINITY
