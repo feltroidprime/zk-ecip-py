@@ -52,6 +52,14 @@ class G1Point:
 
         return result
 
+    def __eq__(self, other):
+        if not isinstance(other, G1Point):
+            raise TypeError("Cannot compare G1Point with non-G1Point")
+        return self.x == other.x and self.y == other.y
+
+    def __hash__(self):
+        return hash((self.x, self.y))
+
     def __neg__(self):
         if self.is_identity():
             return self
