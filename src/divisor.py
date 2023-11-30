@@ -50,25 +50,25 @@ class Divisor:
 
 if __name__ == "__main__":
     # Test
-    p = G1Point(Fp(1), Fp(2))
-    q = G1Point(Fp(3), Fp(4))
-    r = G1Point(Fp(5), Fp(6))
+    p = G1Point.gen_random_point()
+    q = G1Point.gen_random_point()
+    r = G1Point.gen_random_point()
 
     D = Divisor({p: 1, q: 2, r: 3})
-    print(f"D: {D.points} \ndegree: {D.degree}")
+    print(f"D: {D.points} \ndegree: {D.degree}\n")
 
     neg = -D
-    print(f"-D: {neg.points} \ndegree: {neg.degree}")
+    print(f"-D: {neg.points} \ndegree: {neg.degree}\n")
 
     zero = D + neg
-    print(f"zero: {zero.points} \ndegree: {zero.degree}")
+    print(f"D-D: {zero.points} \ndegree: {zero.degree}\n")
 
     assert zero == Divisor.empty()
 
     diff = D - neg
-    print(f"diff.points: {diff.points} \ndegree: {diff.degree}")
+    print(f"D-(-D): {diff.points} \ndegree: {diff.degree}\n")
 
     double = D + D
-    print(f"double.points: {double.points} \ndegree: {double.degree}")
+    print(f"D+D: {double.points} \ndegree: {double.degree}\n")
 
     assert double == diff

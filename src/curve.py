@@ -1,5 +1,6 @@
 from src.field import BaseFieldElement as Felt, BaseField
 from dataclasses import dataclass
+import random
 
 # ------------------------------------------------------------
 # Equation : y^2 = x^3 + 3
@@ -20,7 +21,15 @@ class G1Point:
     y: Felt
 
     def __str__(self) -> str:
-        return f"X: {self.x}\nY: {self.y}"
+        return f"X: {hex(self.x.value)}\nY: {hex(self.y.value)}"
+
+    def __repr__(self) -> str:
+        x_hex = hex(self.x.value)
+        y_hex = hex(self.y.value)
+        x_formatted = x_hex[:7] + "..." + x_hex[-5:]
+        y_formatted = y_hex[:7] + "..." + y_hex[-5:]
+
+        return f"G1P(x={x_formatted}, y={y_formatted})"
 
     @classmethod
     def zero(cls) -> "G1Point":
@@ -51,6 +60,11 @@ class G1Point:
             scalar >>= 1
 
         return result
+
+    @staticmethod
+    def gen_random_point() -> "G1Point":
+        scalar = random.randint(1, N - 1)
+        return G1.scalar_mul(scalar)
 
     def __eq__(self, other):
         if not isinstance(other, G1Point):
@@ -111,6 +125,11 @@ def is_on_curve(pt: G1Point):
 
 assert is_on_curve(G1)
 
-print(G1.scalar_mul(2))
-print(G1.scalar_mul(N - 1))
+print(f"2*G1 :\n{G1.scalar_mul(2)}")
+assert G1.scalar_mul(2) == G1.double()
+
 assert G1.scalar_mul(N) == POINT_AT_INFINITY
+
+random_point = G1Point.gen_random_point()
+
+assert is_on_curve(random_point)
