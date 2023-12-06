@@ -209,6 +209,10 @@ class Polynomial:
             xi = xi * point
         return value
 
+    def scale(self, scalar):
+        scalar = BaseFieldElement(scalar, self.coefficients[0].field)
+        return Polynomial([c * scalar for c in self.coefficients])
+
     def evaluate_domain(self, domain):
         return [self.evaluate(d) for d in domain]
 

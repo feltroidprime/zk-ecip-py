@@ -144,7 +144,8 @@ class BaseField:
         return BaseFieldElement(pow(operand.value, -1, self.p), self)
 
     def divide(self, left, right):
-        assert not right.is_zero(), "divide by zero"
+        if right.is_zero():
+            raise ZeroDivisionError("Cannot divide by zero")
         return left * right.inverse()
 
     def __call__(self, integer):

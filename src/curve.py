@@ -3,12 +3,21 @@ from dataclasses import dataclass
 import random
 
 # ------------------------------------------------------------
+# Generic Weierstrass curve:
+# Equation : y^2 = x^3 + Ax + B
+# BN254 Curve:
 # Equation : y^2 = x^3 + 3
+# A = 0, B = 3
+A = 0
+B = 3
 # Curve prime field
 P = 0x30644E72E131A029B85045B68181585D97816A916871CA8D3C208C16D87CFD47
 # Curve order
 N = 0x30644E72E131A029B85045B68181585D2833E84879B9709143E1F593F0000001
 # ------------------------------------------------------------
+
+# Encode special +inf points as non-rechable integer in the field
+INF = -1
 
 Fp = BaseField(P)
 
@@ -119,7 +128,7 @@ POINT_AT_INFINITY = G1Point(None, None)
 
 def is_on_curve(pt: G1Point):
     left = pt.y**2
-    right = pt.x**3 + 3
+    right = pt.x**3 + A * pt.x + B
     return left == right, f"{left} != {right}"
 
 

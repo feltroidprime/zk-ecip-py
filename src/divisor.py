@@ -13,6 +13,9 @@ class Divisor:
     def empty():
         return Divisor({})
 
+    def is_principal(self) -> bool:
+        return self.degree == 0
+
     def __eq__(self, other: "Divisor") -> bool:
         # remove points if they have multiplicity 0:
         x_points = {p: np for p, np in self.points.items() if np != 0}
