@@ -123,13 +123,14 @@ def is_on_curve(pt: G1Point):
     return left == right, f"{left} != {right}"
 
 
-assert is_on_curve(G1)
+if __name__ == "__main__":
+    assert is_on_curve(G1)
 
-print(f"2*G1 :\n{G1.scalar_mul(2)}")
-assert G1.scalar_mul(2) == G1.double()
+    print(f"2*G1 :\n{G1.scalar_mul(2)}")
+    assert G1.scalar_mul(2) == G1.double()
 
-assert G1.scalar_mul(N) == POINT_AT_INFINITY
+    assert G1.scalar_mul(N) == POINT_AT_INFINITY
 
-random_point = G1Point.gen_random_point()
+    random_point = G1Point.gen_random_point()
 
-assert is_on_curve(random_point)
+    assert is_on_curve(random_point)
