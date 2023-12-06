@@ -23,6 +23,18 @@ class Polynomial:
             coeffs.pop()
         return coeffs
 
+    def derivative(self):
+        """Compute the derivative of the polynomial."""
+        if self.degree() == 0:
+            # The derivative of a constant is 0
+            return Polynomial([self.coefficients[0].field.zero()])
+
+        # Compute the derivative
+        derivative_coeffs = [
+            i * self.coefficients[i] for i in range(1, len(self.coefficients))
+        ]
+        return Polynomial(derivative_coeffs)
+
     def __neg__(self):
         return Polynomial([-c for c in self.coefficients])
 
@@ -129,13 +141,14 @@ class Polynomial:
                 return False
         return True
 
-    def interpolate_domain(domain, values):
+    @staticmethod
+    def lagrange_interpolation(domain, values):
         assert len(domain) == len(
             values
         ), "number of elements in domain does not match number of values -- cannot interpolate"
         assert len(domain) > 0, "cannot interpolate between zero points"
         field = domain[0].field
-        x = Polynomial([field.zero(), field.one()])
+        X = Polynomial([field.zero(), field.one()])
         acc = Polynomial([])
         for i in range(len(domain)):
             prod = Polynomial([values[i]])
@@ -144,10 +157,40 @@ class Polynomial:
                     continue
                 prod = (
                     prod
-                    * (x - Polynomial([domain[j]]))
+                    * (X - Polynomial([domain[j]]))
                     * Polynomial([(domain[i] - domain[j]).inverse()])
                 )
             acc = acc + prod
+        return acc
+
+    @staticmethod
+    def hermite_interpolation(points, values, derivatives):
+        n = len(points)
+        assert (
+            len(values) == n and len(derivatives) == n
+        ), "Lengths of inputs must be equal"
+
+        field = points[0].field
+        X = Polynomial([field.zero(), field.one()])  # Polynomial x
+        acc = Polynomial([field.zero()])  # Accumulator polynomial
+
+        for i in range(n):
+            # Construct the Lagrange basis polynomial for the ith point
+            l_i = Polynomial([field.one()])
+            for j in range(n):
+                if j != i:
+                    l_i *= (X - Polynomial([points[j]])) * Polynomial(
+                        [(points[i] - points[j]).inverse()]
+                    )
+
+            q_i = l_i * l_i  # Square the Lagrange basis polynomial
+            q_i_prime = q_i.derivative()
+            p_i = Polynomial([values[i]]) + (X - Polynomial([points[i]])) * (
+                Polynomial([derivatives[i] - q_i_prime.evaluate(points[i]) * values[i]])
+            )
+
+            acc += q_i * p_i
+
         return acc
 
     def zerofier_domain(domain):
@@ -181,11 +224,6 @@ class Polynomial:
                 acc = acc * self
         return acc
 
-    def scale(self, factor):
-        return Polynomial(
-            [(factor ^ i) * self.coefficients[i] for i in range(len(self.coefficients))]
-        )
-
     def xgcd(x, y):
         one = Polynomial([x.coefficients[0].field.one()])
         zero = Polynomial([x.coefficients[0].field.zero()])
@@ -212,5 +250,76 @@ class Polynomial:
 def test_colinearity(points):
     domain = [p[0] for p in points]
     values = [p[1] for p in points]
-    polynomial = Polynomial.interpolate_domain(domain, values)
+    polynomial = Polynomial.lagrange_interpolation(domain, values)
     return polynomial.degree() == 1
+
+
+if __name__ == "__main__":
+    from src.curve import P
+    from random import randint as rint
+
+    field = BaseField(P)
+    MAX_DEGREE = 10
+    N_TESTS = 100
+
+    for _ in range(N_TESTS):
+        # Random polynomial and its derivative
+        F = Polynomial(
+            [
+                BaseFieldElement(rint(0, P - 1), field)
+                for _ in range(rint(1, MAX_DEGREE + 1))
+            ]
+        )
+        dF = F.derivative()
+
+        # Points at which we want to interpolate
+        points = [
+            BaseFieldElement(rint(0, P - 1), field) for _ in range(2 * F.degree() + 2)
+        ]
+
+        # Corresponding values and derivatives
+        values = [F.evaluate(x) for x in points]
+        derivatives = [dF.evaluate(x) for x in points]
+
+        # Perform Lagrange interpolation
+        lagrange_poly = Polynomial.lagrange_interpolation(points, values)
+        # Perform Hermite interpolation
+        hermite_poly = Polynomial.hermite_interpolation(points, values, derivatives)
+        dhermite_poly = hermite_poly.derivative()
+
+        print(f"Testing the Lagrange interpolation")
+        for x in points:
+            assert lagrange_poly.evaluate(x) == F.evaluate(
+                x
+            ), f"Mismatch at x = {x}, f(x) = {F(x)}, p(x) = {lagrange_poly.evaluate(x)}"
+
+        assert (
+            lagrange_poly == F
+        ), f"Lagrange and Hermite polynomials differ, {lagrange_poly} != {F}"
+
+        print("Lagrange interpolation successful!")
+
+        print("Testing Hermite Interpolation")
+        for i, x in enumerate(points):
+            hermite_val = hermite_poly.evaluate(x)
+            expected_val = F.evaluate(x)
+            hermite_deriv_val = dhermite_poly.evaluate(x)
+            expected_deriv_val = dF.evaluate(x)
+
+            assert (
+                hermite_val == expected_val
+            ), f"Mismatch at x = {x}, f(x) = {expected_val}, p(x) = {hermite_val}"
+
+            assert (
+                hermite_deriv_val == expected_deriv_val
+            ), f"Mismatch at x = {x}, f'(x) = {expected_deriv_val}, p'(x) = {hermite_deriv_val}"
+
+        print("Hermite interpolation successful!")
+
+        print(
+            f"lagrange_poly: {lagrange_poly.get_coeffs()}, degree : {lagrange_poly.degree()}"
+        )
+        print(
+            f"hermite_poly: {hermite_poly.get_coeffs()}, degree : {hermite_poly.degree()}"
+        )
+        print(f"Original F: {F.get_coeffs()}, degree : {F.degree()}")
