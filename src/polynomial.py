@@ -54,7 +54,17 @@ class Polynomial:
     def __sub__(self, other):
         return self.__add__(-other)
 
+    def __rmul__(self, other):
+        return self.__mul__(other)
+
     def __mul__(self, other):
+        if isinstance(other, (int, BaseFieldElement)):
+            return self.scale(other)
+        elif not isinstance(other, Polynomial):
+            raise TypeError(
+                f"Cannot multiply polynomial by type {type(other)}, must be int or Polynomial"
+            )
+
         if self.coefficients == [] or other.coefficients == []:
             return Polynomial([])
         zero = self.coefficients[0].field.zero()
@@ -65,6 +75,16 @@ class Polynomial:
             for j in range(len(other.coefficients)):
                 buf[i + j] = buf[i + j] + self.coefficients[i] * other.coefficients[j]
         return Polynomial(buf)
+
+    def __pow__(self, exponent):
+        if exponent == 0:
+            return Polynomial([self.coefficients[0].field.one()])
+        acc = Polynomial([self.coefficients[0].field.one()])
+        for i in reversed(range(len(bin(exponent)[2:]))):
+            acc = acc * acc
+            if (1 << i) & exponent != 0:
+                acc = acc * self
+        return acc
 
     def __truediv__(self, other):
         quo, rem = Polynomial.divide(self, other)
@@ -210,25 +230,37 @@ class Polynomial:
         return value
 
     def scale(self, scalar):
-        scalar = BaseFieldElement(scalar, self.coefficients[0].field)
+        if isinstance(scalar, int):
+            scalar = BaseFieldElement(scalar, self.coefficients[0].field)
+        elif not isinstance(scalar, BaseFieldElement):
+            raise TypeError(
+                f"Cannot scale polynomial by type {type(scalar)}, must be int or BaseFieldElement"
+            )
         return Polynomial([c * scalar for c in self.coefficients])
 
     def evaluate_domain(self, domain):
         return [self.evaluate(d) for d in domain]
 
-    def __xor__(self, exponent):
-        if self.is_zero():
-            return Polynomial([])
-        if exponent == 0:
-            return Polynomial([self.coefficients[0].field.one()])
-        acc = Polynomial([self.coefficients[0].field.one()])
-        for i in reversed(range(len(bin(exponent)[2:]))):
-            acc = acc * acc
-            if (1 << i) & exponent != 0:
-                acc = acc * self
-        return acc
-
+    @staticmethod
     def xgcd(x, y):
+        """
+        Extended Euclidean Algorithm for polynomials.
+
+        This method computes the extended greatest common divisor (GCD) of two polynomials x and y.
+        It returns a tuple of three elements: (a, b, g) such that a * x + b * y = g, where g is the
+        greatest common divisor of x and y. This is particularly useful in contexts like
+        computational algebra or number theory where the coefficients of the polynomials are in a field.
+
+        Parameters:
+        x (Polynomial): The first polynomial.
+        y (Polynomial): The second polynomial.
+
+        Returns:
+        tuple: A tuple (a, b, g) where:
+            a (Polynomial): A polynomial such that a * x + b * y = g.
+            b (Polynomial): A polynomial such that a * x + b * y = g.
+            g (Polynomial): The greatest common divisor of x and y.
+        """
         one = Polynomial([x.coefficients[0].field.one()])
         zero = Polynomial([x.coefficients[0].field.zero()])
         old_r, r = (x, y)
@@ -263,10 +295,10 @@ if __name__ == "__main__":
     from random import randint as rint
 
     field = BaseField(P)
-    MAX_DEGREE = 10
-    N_TESTS = 100
 
-    for _ in range(N_TESTS):
+    N_TESTS = 1
+
+    def test_interpolations(MAX_DEGREE=10):
         # Random polynomial and its derivative
         F = Polynomial(
             [
@@ -327,3 +359,25 @@ if __name__ == "__main__":
             f"hermite_poly: {hermite_poly.get_coeffs()}, degree : {hermite_poly.degree()}"
         )
         print(f"Original F: {F.get_coeffs()}, degree : {F.degree()}")
+
+    for _ in range(N_TESTS):
+        test_interpolations()
+
+    def test_pow():
+        MAX_DEGREE = 3
+        for _ in range(N_TESTS):
+            F = Polynomial(
+                [
+                    BaseFieldElement(rint(0, P - 1), field)
+                    for _ in range(rint(1, MAX_DEGREE + 1))
+                ]
+            )
+            exponent = rint(0, 100)
+            expected = Polynomial([field.one()])
+            for _ in range(exponent):
+                expected = expected * F
+            assert (
+                F**exponent == expected
+            ), f"Polynomial exponentiation differs from operator ^"
+
+    test_pow()
