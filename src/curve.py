@@ -30,9 +30,13 @@ class G1Point:
     y: Felt
 
     def __str__(self) -> str:
+        if self.is_identity():
+            return "Identity"
         return f"X: {hex(self.x.value)}\nY: {hex(self.y.value)}"
 
     def __repr__(self) -> str:
+        if self.is_identity():
+            return "G1P(Identity)"
         x_hex = hex(self.x.value)
         y_hex = hex(self.y.value)
         x_formatted = x_hex[:7] + "..." + x_hex[-5:]
@@ -78,6 +82,10 @@ class G1Point:
     def __eq__(self, other):
         if not isinstance(other, G1Point):
             raise TypeError("Cannot compare G1Point with non-G1Point")
+        if self.is_identity() and other.is_identity():
+            return True
+        elif self.is_identity() or other.is_identity():
+            return False
         return self.x == other.x and self.y == other.y
 
     def __hash__(self):
