@@ -34,6 +34,18 @@ class RationalFunction:
 
         return RationalFunction(self.num * other.num, self.den * other.den)
 
+    def __truediv__(self, other) -> "RationalFunction":
+        if isinstance(other, int):
+            other = RationalFunction(
+                Polynomial([Felt(other, Fp)]), Polynomial([Fp.one()])
+            )
+        if isinstance(other, Felt):
+            other = RationalFunction(Polynomial([other]), Polynomial([Fp.one()]))
+        if isinstance(other, Polynomial):
+            other = RationalFunction(other, Polynomial([Fp.one()]))
+
+        return RationalFunction(self.num * other.den, self.den * other.num)
+
     def __rmul__(self, other) -> "RationalFunction":
         return self.__mul__(other)
 
@@ -62,3 +74,14 @@ class RationalFunction:
 
     def __sub__(self, other) -> "RationalFunction":
         return self + (-other)
+
+    def is_poly(self) -> bool:
+        rem = self.num % self.den
+        return rem.is_zero()
+
+    def to_poly(self) -> Polynomial:
+        if not self.is_poly():
+            raise ValueError("Rational function is not a polynomial")
+        else:
+            print(f"Rational function is a polynomial!")
+        return self.num // self.den
