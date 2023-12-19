@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import random
 from random import randint as rint
 from src.polynomial import Polynomial
 from src.rational_function import RationalFunction
@@ -81,6 +82,7 @@ def test_witness(f: FunctionFelt, d: Divisor) -> bool:
     """
     Test if the function field element f is correctly associated with the divisor d.
     """
+    # TODO : check multpiplicity of roots
 
     for p, np in d.points.items():
         if p == POINT_AT_INFINITY:
@@ -141,29 +143,79 @@ def mumford_witness(d: Divisor) -> FunctionFelt:
             continue
         if m > 1:
             # Appendix 7.1.
-            # u = (X - Polynomial([point.x])) ** np
             # Hensel Lifting, Appendix 7.1.
-            # k = 0
-            # v_i = Polynomial([point.y])
-            # u_i = X - Polynomial([point.x])
-            # r_i = RationalFunction(
-            #     u_i**2 - (X**3 + A * X + Polynomial([BaseFieldElement(B, Fp)])), u_i
-            # )
-            # q_i = RationalFunction(-2 * r_i, v_i)
-            # while 2**k < m:
-            #     break
+            v = []
+            r = []
+            q = []
+
+            i = 0
+            v.append(Polynomial([point.y]))
+            print(f"v_{i}: {v[i].get_coeffs()}")
+
+            r.append(
+                (
+                    Polynomial([point.y]) ** 2
+                    - (X**3 + A * X + Polynomial([BaseFieldElement(B, Fp)]))
+                )
+                / (X - Polynomial([point.x]))
+            )
+
+            q.append(((-2 * r[i]) / v[i]) % ((X - Polynomial([point.x])) ** (2**i)))
+            print(f"q_{i}: {q[i].get_coeffs()}")
+
+            while True:
+                check_poly = v[i] ** 2 - (
+                    X**3 + A * X + Polynomial([BaseFieldElement(B, Fp)])
+                )
+                mod_check = (X - Polynomial([point.x])) ** (2 ** (i))
+                if (check_poly % mod_check).is_zero() == False:
+                    print(
+                        f"Stage {i} not working, {check_poly.get_coeffs()} % {mod_check.get_coeffs()} != 0"
+                    )
+                    raise ValueError(f"Error in Hensel Lifting, stage {i}")
+                else:
+                    print(
+                        f"Stage {i} working, {check_poly.get_coeffs()} % {mod_check.get_coeffs()} == 0"
+                    )
+
+                i += 1
+
+                print(f"i: {i}")
+                X_MIN_XP_POW_2I = (X - Polynomial([point.x])) ** (2 ** (i - 1))
+                v.append(v[i - 1] + X_MIN_XP_POW_2I * q[i - 1])
+
+                if 2 ** (i - 1) < m <= 2**i:
+                    # Last iteration, v(x)  = v[i] % (X - x_p) ** m
+                    print(f"Last iteration {i}")
+                    break
+
+                # r.append(
+                #     ((r[i - 1] + 2 * v[i - 1] * q[i - 1]) / X_MIN_XP_POW_2I)
+                #     + q[i - 1] ** 2
+                # )
+
+                # q_i = -2 * r_i / v_i
+                # q_i = q_i.to_poly()
+                # q_i = q_i % X_MIN_XP_POW_2I
+
+            final_v = v[i] % (X - Polynomial([point.x])) ** m
+            print(f"deg(final_v) = {final_v.degree()}")
+            print(f"final_v = {final_v.get_coeffs()}")
+            print(f"v(xp) = {final_v.evaluate(point.x)}")
+            print(f"v'(xp) = {final_v.derivative().evaluate(point.x)}")
             raise NotImplementedError("Hensel Lifting not implemented")
     return res
 
 
 if __name__ == "__main__":
     # Tests
+    random.seed(0)
     p = G1Point.gen_random_point()
     q = G1Point.gen_random_point()
     r = G1Point.gen_random_point()
     s = G1Point.gen_random_point()
 
-    D = Divisor({p: 1, q: 2, r: 3, POINT_AT_INFINITY: -6})
+    D = Divisor({p: 1, q: 3, r: 2, POINT_AT_INFINITY: -6})
 
     # f1 = incremental_witness(D)
     # f2 = mumford_witness(D)
@@ -178,3 +230,6 @@ if __name__ == "__main__":
     f = mumford_witness(D_single_multiplicities)
     print(f"Function field element: {f}")
     assert test_witness(f, D_single_multiplicities) == True, f"Wrong Mumford witness"
+
+    print(f"Test multiplicity 2")
+    f = mumford_witness(D)
