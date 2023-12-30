@@ -109,6 +109,23 @@ def incremental_witness(d: Divisor) -> FunctionFelt:
     pass
 
 
+# Computes (X - xp)^(2^i) as a polynomial
+def X_MIN_XP_POW_2I(xp, i) -> Polynomial:
+    X = Polynomial([Fp.zero(), Fp.one()])
+    return (X - Polynomial([xp])) ** (2**i)
+
+
+def check_stage(i: int, vi: Polynomial, xp: BaseFieldElement):
+    X = Polynomial([Fp.zero(), Fp.one()])
+
+    check_poly = vi**2 - (X**3 + A * X + Polynomial([BaseFieldElement(B, Fp)]))
+    mod_check = X_MIN_XP_POW_2I(xp, i)
+    check = check_poly % mod_check
+    assert check.is_zero(), f"check = {check} != 0"
+    print(f"Stage {i} working, (x-xp)^(2^{i}) does divide v_{i}^2 - (x^3 + A*x + B)")
+    return True
+
+
 def mumford_witness(d: Divisor) -> FunctionFelt:
     """
     Compute the function field element f assiociated with the divisor d.
@@ -143,15 +160,63 @@ def mumford_witness(d: Divisor) -> FunctionFelt:
             # Appendix 7.1.
             # u = (X - Polynomial([point.x])) ** np
             # Hensel Lifting, Appendix 7.1.
-            # k = 0
-            # v_i = Polynomial([point.y])
-            # u_i = X - Polynomial([point.x])
-            # r_i = RationalFunction(
-            #     u_i**2 - (X**3 + A * X + Polynomial([BaseFieldElement(B, Fp)])), u_i
-            # )
-            # q_i = RationalFunction(-2 * r_i, v_i)
-            # while 2**k < m:
-            #     break
+            v = []
+            r = []
+            q = []
+
+            i = 0
+            v.append(Polynomial([point.y]))
+            print(f"v_{i}: {v[i].get_coeffs()}")
+
+            r.append(
+                (
+                    Polynomial([point.y**2])
+                    - (X**3 + A * X + Polynomial([BaseFieldElement(B, Fp)]))
+                )
+                / (X - Polynomial([point.x]))
+            )
+            print(f"r_{i}: {r[i].get_coeffs()}")
+            resqt = (-2 * r[i]) / v[i]
+            div = X - Polynomial([point.x])
+            print(f"resqt: {resqt.get_coeffs()}")
+            print(f"div: {div.get_coeffs()}")
+            # quotient = resqt / div
+            # print(f"quotient: {quotient.get_coeffs()}")
+            # q.append(resqt % div)
+            q.append(Polynomial([Fp.zero()]))
+            print(f"q_{i}: {q[i].get_coeffs()}")
+
+            while True:
+                print(f"Stage {i} check")
+                check_stage(i, v[i], point.x)
+
+                i += 1
+
+                print(f"i: {i}")
+                X_MIN_XP_POW_2I = (X - Polynomial([point.x])) ** (2 ** (i - 1))
+                v.append(v[i - 1] + X_MIN_XP_POW_2I * q[i - 1])
+                print(f"deg(v_{i}): {v[i].degree()}")
+
+                if 2 ** (i - 1) < m <= 2**i:
+                    # Last iteration, v(x)  = v[i] % (X - x_p) ** m
+                    print(f"Last iteration {i}")
+                    check_stage(i, v[i], point.x)
+                    break
+
+                # r.append(
+                #     ((r[i - 1] + 2 * v[i - 1] * q[i - 1]) / X_MIN_XP_POW_2I)
+                #     + q[i - 1] ** 2
+                # )
+
+                # q_i = -2 * r_i / v_i
+                # q_i = q_i.to_poly()
+                # q_i = q_i % X_MIN_XP_POW_2I
+
+            final_v = v[i] % (X - Polynomial([point.x])) ** m
+            print(f"deg(final_v) = {final_v.degree()}")
+            print(f"final_v = {final_v.get_coeffs()}")
+            print(f"v(xp) = {final_v.evaluate(point.x)}")
+            print(f"v'(xp) = {final_v.derivative().evaluate(point.x)}")
             raise NotImplementedError("Hensel Lifting not implemented")
     return res
 
@@ -163,7 +228,7 @@ if __name__ == "__main__":
     r = G1Point.gen_random_point()
     s = G1Point.gen_random_point()
 
-    D = Divisor({p: 1, q: 2, r: 3, POINT_AT_INFINITY: -6})
+    D = Divisor({p: 3, (-(p + p + p)): 1, POINT_AT_INFINITY: -4})
 
     # f1 = incremental_witness(D)
     # f2 = mumford_witness(D)
@@ -174,7 +239,9 @@ if __name__ == "__main__":
     n = f.norm()
     n.evaluate(p.x)
 
-    D_single_multiplicities = Divisor({p: 1, q: 1, r: 1, s: 1, POINT_AT_INFINITY: -4})
+    D_single_multiplicities = Divisor(
+        {p: 1, q: 1, r: 1, -(p + q + r): 1, POINT_AT_INFINITY: -4}
+    )
     f = mumford_witness(D_single_multiplicities)
     print(f"Function field element: {f}")
     assert test_witness(f, D_single_multiplicities) == True, f"Wrong Mumford witness"

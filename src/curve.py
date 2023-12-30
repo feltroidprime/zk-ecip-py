@@ -32,7 +32,7 @@ class G1Point:
     def __str__(self) -> str:
         if self.is_identity():
             return "Identity"
-        return f"X: {hex(self.x.value)}\nY: {hex(self.y.value)}"
+        return f"X: {self.x.value}\nY: {self.y.value}"
 
     def __repr__(self) -> str:
         if self.is_identity():
@@ -64,6 +64,12 @@ class G1Point:
         return G1Point(nx, ny)
 
     def scalar_mul(self, scalar: int) -> "G1Point":
+        if self.is_identity():
+            return self
+        if scalar == 0:
+            return G1Point(None, None)
+        if scalar < 0:
+            return -self.scalar_mul(-scalar)
         result = G1Point(None, None)  # Identity
         addend = self
         while scalar:

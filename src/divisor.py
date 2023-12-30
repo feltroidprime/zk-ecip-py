@@ -9,12 +9,32 @@ class Divisor:
         self.points = points
         self.degree = sum(points.values())
 
+    def __repr__(self) -> str:
+        return f"Divisor({self.points})"
+
     @staticmethod
     def empty():
         return Divisor({})
 
+    def get_sum(self) -> G1Point:
+        """
+        Return the sum of all points in this divisor.
+        """
+        acc = G1Point.zero()
+        for p, np in self.points.items():
+            acc += p.scalar_mul(np)
+
+        return acc
+
     def is_principal(self) -> bool:
-        return self.degree == 0
+        """
+        Check if this divisor is principal.
+        """
+        val = self.get_sum()
+        if val.is_identity() and self.degree == 0:
+            return True
+        else:
+            return False
 
     def __eq__(self, other: "Divisor") -> bool:
         # remove points if they have multiplicity 0:
