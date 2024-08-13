@@ -1,3 +1,6 @@
+Deprecated : 
+See https://github.com/keep-starknet-strange/garaga/blob/1267943796fc506d87c0539c9fe9ec84cd67fb89/hydra/hints/ecip.py#L88 for full implementation. 
+
 # zk-ecip-py
 Poc python implementation of the paper "Zero Knowledge Proofs of Elliptic Curve Inner Products from Principal Divisors and Weil Reciprocity" by Liam Eagen  
 https://eprint.iacr.org/2022/596.pdf
